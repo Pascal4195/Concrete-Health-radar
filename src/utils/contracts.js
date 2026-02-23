@@ -1,14 +1,14 @@
 export const VAULT_ABI = [
   {
     "inputs": [],
-    "name": "health",
+    "name": "getHealthFactor", // Matches item #13 in your screenshot
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "totalAssets",
+    "name": "totalAssets", // Matches ERC-4626 standard
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
