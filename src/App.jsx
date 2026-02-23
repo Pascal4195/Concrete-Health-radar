@@ -2,7 +2,7 @@ import React from 'react';
 import { Activity, ShieldAlert, Zap, Globe, Cpu } from 'lucide-react';
 import Gauge from './components/Gauge';
 import VaultCard from './components/VaultCard';
-import FactoryScan from './components/factoryscan'; // Ensure this matches your lowercase filename
+import FactoryScan from './components/FactoryScan'; // Ensure this matches your lowercase filename
 import { useVaults } from './hooks/useVaults';
 
 function App() {
