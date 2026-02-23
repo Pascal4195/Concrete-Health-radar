@@ -13,95 +13,72 @@ export const useVaults = () => {
   const [globalHealth, setGlobalHealth] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const fetchRealData = async () => {
+  const fetchVaultData = async (v) => {
     try {
-      const results = await Promise.all(VAULT_ADDRESSES.map(async (v) => {
-        try {
-          let collateralRaw = 0n;
-          let debtRaw = 0n;
-          let threshold = 0.85; // Default safety buffer
-          let decimals = 18;
+      // 1. FEATURE DETECTION: Detect "New School" vs "Old School"
+      const [decimals, debtRaw] = await Promise.all([
+        client.readContract({ address: v.address, abi: VAULT_ABI, functionName: 'decimals' }).catch(() => 18),
+        client.readContract({ address: v.address, abi: VAULT_ABI, functionName: 'totalDebt' }).catch(() => 0n)
+      ]);
 
-          // 1. SET PARAMETERS BY VAULT NAME
-          if (v.name.includes("WBTC")) {
-            decimals = 8;
-            threshold = 0.75; // Typical WBTC safety
-            collateralRaw = await client.readContract({ 
-              address: v.address, abi: VAULT_ABI, functionName: 'totalAssets' 
-            }).catch(() => 0n);
-            debtRaw = await client.readContract({ 
-              address: v.address, abi: VAULT_ABI, functionName: 'totalDebt' 
-            }).catch(() => 0n);
-          } 
-          else if (v.name.includes("USDT") || v.name.includes("frxUSD+")) {
-            decimals = 18;
-            collateralRaw = await client.readContract({ 
-              address: v.address, abi: VAULT_ABI, functionName: 'getTotalAllocated' 
-            }).catch(() => 0n);
-            debtRaw = await client.readContract({ 
-              address: v.address, abi: VAULT_ABI, functionName: 'totalDebt' 
-            }).catch(() => 0n);
-            
-            // Try to get real threshold from config
-            const config = await client.readContract({ 
-              address: v.address, abi: VAULT_ABI, functionName: 'getVaultConfig' 
-            }).catch(() => null);
-            if (config?.liquidationThreshold) {
-              threshold = Number(config.liquidationThreshold) / 10000;
-            }
-          }
-          else {
-            // Default/Institutional (weETH)
-            decimals = 18;
-            collateralRaw = await client.readContract({ 
-              address: v.address, abi: VAULT_ABI, functionName: 'totalAssets' 
-            }).catch(() => 0n);
-            debtRaw = await client.readContract({ 
-              address: v.address, abi: VAULT_ABI, functionName: 'totalDebt' 
-            }).catch(() => 0n);
-          }
+      let collateralRaw = 0n;
+      let threshold = 0.85;
 
-          // 2. THE MATH (Aave Health Factor)
-          const collateral = Number(formatUnits(collateralRaw, decimals));
-          const debt = Number(formatUnits(debtRaw, decimals));
-          
-          let uiHealth = 0;
+      // Check for New School (getTotalAllocated)
+      const allocated = await client.readContract({ address: v.address, abi: VAULT_ABI, functionName: 'getTotalAllocated' }).catch(() => null);
+      
+      if (allocated !== null) {
+        collateralRaw = allocated;
+        const config = await client.readContract({ address: v.address, abi: VAULT_ABI, functionName: 'getVaultConfig' }).catch(() => null);
+        if (config?.liquidationThreshold) threshold = Number(config.liquidationThreshold) / 10000;
+      } else {
+        // Fallback to Old School (totalAssets)
+        collateralRaw = await client.readContract({ address: v.address, abi: VAULT_ABI, functionName: 'totalAssets' }).catch(() => 0n);
+        threshold = 0.75; // Standard safety for WBTC/Simple vaults
+      }
 
-          if (debt > 0) {
-            // Formula: (Collateral * Threshold) / Debt
-            const healthFactor = (collateral * threshold) / debt;
-            // Map 1.0 (Liquidation) to 0% and 2.0 to 100% Stability
-            uiHealth = Math.min(Math.max((healthFactor - 1) * 100, 0), 100);
-          } else if (collateral > 0) {
-            uiHealth = 100; // Solvent with no debt
-          } else {
-            uiHealth = 0; // Empty vault
-          }
+      // 2. APPLY AAVE FORMULA
+      const collateral = Number(formatUnits(collateralRaw, decimals));
+      const debt = Number(formatUnits(debtRaw, decimals));
+      
+      let hf = 2.0; 
+      if (debt > 0) hf = (collateral * threshold) / debt;
+      else if (collateral === 0) hf = 0; // Empty = No health
 
-          return {
-            name: v.name,
-            health: Math.round(uiHealth),
-            assets: collateral > 0 ? `$${(collateral / 1000000).toFixed(2)}M` : "$0.0M"
-          };
+      // Map HF 1.0 -> 0% UI, 2.0+ -> 100% UI
+      const uiHealth = debt > 0 ? Math.min(Math.max((hf - 1) * 100, 0), 100) : (collateral > 0 ? 100 : 0);
 
-        } catch (e) {
-          console.error(`Failed ${v.name}:`, e);
-          return { name: v.name, health: 0, assets: "---" };
-        }
-      }));
-
-      setVaults(results);
-      const active = results.filter(v => v.health > 0);
-      setGlobalHealth(active.length > 0 ? Math.round(active.reduce((a, b) => a + b.health, 0) / active.length) : 0);
-      setLoading(false);
-    } catch (err) {
-      setLoading(false);
+      return {
+        name: v.name,
+        health: Math.round(uiHealth),
+        hf: hf,
+        tvl: collateral,
+        assets: `$${(collateral / 1000000).toFixed(2)}M`
+      };
+    } catch (e) {
+      return { name: v.name, health: 0, hf: 0, tvl: 0, assets: "ERR" };
     }
   };
 
+  const updateAll = async () => {
+    const results = await Promise.all(VAULT_ADDRESSES.map(fetchVaultData));
+    
+    // 3. COMPUTE WEIGHTED GLOBAL HEALTH
+    const totalTVL = results.reduce((sum, v) => sum + v.tvl, 0);
+    if (totalTVL > 0) {
+      const weightedHealth = results.reduce((sum, v) => sum + (v.health * (v.tvl / totalTVL)), 0);
+      setGlobalHealth(Math.round(weightedHealth));
+    } else {
+      setGlobalHealth(0);
+    }
+
+    setVaults(results);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    fetchRealData();
-    const interval = setInterval(fetchRealData, 30000);
+    updateAll();
+    const interval = setInterval(updateAll, 30000);
     return () => clearInterval(interval);
   }, []);
 
