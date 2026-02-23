@@ -1,68 +1,57 @@
-import { useState, useEffect } from 'react';
-import { createPublicClient, http, formatUnits } from 'viem';
-import { mainnet } from 'viem/chains';
-import { VAULT_ABI, VAULT_ADDRESSES } from '../utils/contracts';
+const fetchRealData = async () => {
+  try {
+    const results = await Promise.all(VAULT_ADDRESSES.map(async (v) => {
+      try {
+        // WBTC uses 8 decimals, everything else uses 18
+        const decimals = v.name.includes("WBTC") ? 8 : 18;
 
-const client = createPublicClient({ 
-  chain: mainnet,
-  transport: http(import.meta.env.VITE_RPC_URL || "https://eth.llamarpc.com")
-});
+        // Fetching exactly what your screenshots showed
+        const [allocated, assets, debt, config] = await Promise.all([
+          client.readContract({ address: v.address, abi: VAULT_ABI, functionName: 'getTotalAllocated' }).catch(() => 0n),
+          client.readContract({ address: v.address, abi: VAULT_ABI, functionName: 'totalAssets' }).catch(() => 0n),
+          client.readContract({ address: v.address, abi: VAULT_ABI, functionName: 'totalDebt' }).catch(() => 0n),
+          client.readContract({ address: v.address, abi: VAULT_ABI, functionName: 'getVaultConfig' }).catch(() => null)
+        ]);
 
-export const useVaults = () => {
-  const [vaults, setVaults] = useState([]);
-  const [globalHealth, setGlobalHealth] = useState(0);
-  const [loading, setLoading] = useState(true);
+        // Use the higher of the two asset values for TVL
+        const collateralRaw = allocated > assets ? allocated : assets;
+        const collateral = Number(formatUnits(collateralRaw, decimals));
+        const currentDebt = Number(formatUnits(debt, decimals));
+        
+        // Threshold: Use contract value or default to a conservative 80%
+        const threshold = config ? Number(config.liquidationThreshold) / 10000 : 0.80;
 
-  const fetchRealData = async () => {
-    try {
-      const results = await Promise.all(VAULT_ADDRESSES.map(async (v) => {
-        try {
-          const decimals = v.name.includes("WBTC") ? 8 : 18;
+        let uiHealth = 0; 
 
-          // Pull ONLY the raw data we saw in your Etherscan screenshots
-          const [allocatedRaw, assetsRaw] = await Promise.all([
-            client.readContract({ address: v.address, abi: VAULT_ABI, functionName: 'getTotalAllocated' }).catch(() => 0n),
-            client.readContract({ address: v.address, abi: VAULT_ABI, functionName: 'totalAssets' }).catch(() => 0n)
-          ]);
-
-          const allocated = Number(formatUnits(allocatedRaw, decimals));
-          const total = Number(formatUnits(assetsRaw, decimals));
-
-          // --- NEW FORMULA: SOLVENCY & UTILIZATION ---
-          let score = 0;
-          if (total > 0) {
-            // How much of the TVL is actually 'Allocated' to strategies?
-            score = (allocated / total) * 100;
-          }
-
-          return {
-            name: v.name,
-            health: Math.round(Math.min(score, 100)), // Caps at 100%
-            assets: total > 0 ? `$${(total / 1000000).toFixed(2)}M` : "$0.00M"
-          };
-        } catch (e) {
-          return { name: v.name, health: 0, assets: "OFFLINE" };
+        if (currentDebt > 0) {
+          // THE AAVE FORMULA
+          const hf = (collateral * threshold) / currentDebt;
+          uiHealth = Math.min(Math.max((hf - 1) * 100, 0), 100);
+        } else if (collateral > 0) {
+          // If there is money but no debt, the vault is 100% stable
+          uiHealth = 100;
         }
-      }));
 
-      setVaults(results);
-      
-      // Global Radar is the average of all active vault scores
-      const active = results.filter(v => v.assets !== "$0.00M");
-      const avg = active.length > 0 ? active.reduce((a, b) => a + b.health, 0) / active.length : 0;
-      
-      setGlobalHealth(Math.round(avg));
-      setLoading(false);
-    } catch (err) {
-      setLoading(false);
-    }
-  };
+        return {
+          name: v.name,
+          health: Math.round(uiHealth),
+          assets: collateral > 0 ? `$${(collateral / 1000000).toFixed(2)}M` : "$0.00M"
+        };
+      } catch (e) {
+        return { name: v.name, health: 0, assets: "OFFLINE" };
+      }
+    }));
 
-  useEffect(() => {
-    fetchRealData();
-    const interval = setInterval(fetchRealData, 15000); // Faster refresh
-    return () => clearInterval(interval);
-  }, []);
+    setVaults(results);
+    // Weighted global health based on TVL
+    const totalTVL = results.reduce((sum, v) => sum + parseFloat(v.assets.replace(/[^0-9.]/g, '') || 0), 0);
+    const weightedAvg = totalTVL > 0 
+      ? results.reduce((sum, v) => sum + (v.health * (parseFloat(v.assets.replace(/[^0-9.]/g, '') || 0) / totalTVL)), 0)
+      : 0;
 
-  return { vaults, globalHealth, loading };
+    setGlobalHealth(Math.round(weightedAvg));
+    setLoading(false);
+  } catch (err) {
+    setLoading(false);
+  }
 };
