@@ -3,7 +3,6 @@ import { createPublicClient, http, formatUnits } from 'viem';
 import { mainnet } from 'viem/chains';
 import { VAULT_ABI, VAULT_ADDRESSES } from '../utils/contracts';
 
-// Get your API key from Alchemy or Infura
 const RPC_URL = import.meta.env.VITE_RPC_URL || "https://eth.llamarpc.com";
 
 const client = createPublicClient({ 
@@ -18,48 +17,49 @@ export const useVaults = () => {
 
   const fetchRealData = async () => {
     try {
-      setLoading(true);
-      
       const results = await Promise.all(VAULT_ADDRESSES.map(async (v) => {
         try {
-          // Fetch Health Factor (Assuming it returns a value where 1e18 = 1.0)
           const health = await client.readContract({
             address: v.address,
             abi: VAULT_ABI,
-            functionName: 'getHealthFactor',
-          });
+            functionName: 'health',
+          }).catch(() => 0n);
 
-          // Fetch Total Assets
           const assets = await client.readContract({
             address: v.address,
             abi: VAULT_ABI,
             functionName: 'totalAssets',
-          });
+          }).catch(() => 0n);
+
+          // Health usually comes in 1e18. 1.2e18 = 120% health.
+          const formattedHealth = Number(formatUnits(health, 16)); 
 
           return {
             name: v.name,
-            health: Number(formatUnits(health, 16)), // Adjust decimals based on Concrete's spec
-            assets: `$${Math.round(Number(formatUnits(assets, 18)) / 1000000)}M`
+            health: formattedHealth > 0 ? Math.round(formattedHealth) : 0,
+            assets: assets > 0 ? `$${(Number(formatUnits(assets, 18)) / 1000000).toFixed(1)}M` : "$0M"
           };
         } catch (e) {
-          console.error(`Error fetching ${v.name}:`, e);
-          return { name: v.name, health: 0, assets: "Error" };
+          return { name: v.name, health: 0, assets: "---" };
         }
       }));
 
       setVaults(results);
-      const avg = results.reduce((acc, v) => acc + v.health, 0) / results.length;
+      const activeVaults = results.filter(v => v.health > 0);
+      const avg = activeVaults.length > 0 
+        ? activeVaults.reduce((acc, v) => acc + v.health, 0) / activeVaults.length 
+        : 0;
+      
       setGlobalHealth(Math.round(avg));
       setLoading(false);
     } catch (err) {
-      console.error("Global Fetch Error:", err);
       setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchRealData();
-    const interval = setInterval(fetchRealData, 30000); // Auto-refresh every 30s
+    const interval = setInterval(fetchRealData, 30000);
     return () => clearInterval(interval);
   }, []);
 
