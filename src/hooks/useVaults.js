@@ -19,62 +19,63 @@ export const useVaults = () => {
         try {
           let collateralRaw = 0n;
           let debtRaw = 0n;
-          let threshold = 0.85; // Default safety buffer (85%)
-          
-          // Specific Decimals: WBTC is 8, USDT/ETH are usually 18
-          const decimals = v.name.includes("WBTC") ? 8 : 18;
+          let threshold = 0.85; // Default safety buffer
+          let decimals = 18;
 
-          // --- INDIVIDUAL VAULT LOGIC ---
-          // Each vault uses the specific functions from your Etherscan screenshots
-          
+          // 1. SET PARAMETERS BY VAULT NAME
           if (v.name.includes("WBTC")) {
-            // WBTC Vault (Standard ERC-4626 style)
+            decimals = 8;
+            threshold = 0.75; // Typical WBTC safety
             collateralRaw = await client.readContract({ 
               address: v.address, abi: VAULT_ABI, functionName: 'totalAssets' 
             }).catch(() => 0n);
-            
             debtRaw = await client.readContract({ 
               address: v.address, abi: VAULT_ABI, functionName: 'totalDebt' 
             }).catch(() => 0n);
           } 
-          else {
-            // Modular Vaults (USDT, weETH, frxUSD+)
+          else if (v.name.includes("USDT") || v.name.includes("frxUSD+")) {
+            decimals = 18;
             collateralRaw = await client.readContract({ 
               address: v.address, abi: VAULT_ABI, functionName: 'getTotalAllocated' 
             }).catch(() => 0n);
-
             debtRaw = await client.readContract({ 
               address: v.address, abi: VAULT_ABI, functionName: 'totalDebt' 
             }).catch(() => 0n);
-
-            // Fetch real threshold from the contract config
+            
+            // Try to get real threshold from config
             const config = await client.readContract({ 
               address: v.address, abi: VAULT_ABI, functionName: 'getVaultConfig' 
             }).catch(() => null);
-            
-            if (config && config.liquidationThreshold) {
+            if (config?.liquidationThreshold) {
               threshold = Number(config.liquidationThreshold) / 10000;
             }
           }
+          else {
+            // Default/Institutional (weETH)
+            decimals = 18;
+            collateralRaw = await client.readContract({ 
+              address: v.address, abi: VAULT_ABI, functionName: 'totalAssets' 
+            }).catch(() => 0n);
+            debtRaw = await client.readContract({ 
+              address: v.address, abi: VAULT_ABI, functionName: 'totalDebt' 
+            }).catch(() => 0n);
+          }
 
-          // --- THE AAVE FORMULA MATH ---
-          // Health Factor = (Collateral * Threshold) / Debt
-          
+          // 2. THE MATH (Aave Health Factor)
           const collateral = Number(formatUnits(collateralRaw, decimals));
           const debt = Number(formatUnits(debtRaw, decimals));
           
           let uiHealth = 0;
 
           if (debt > 0) {
+            // Formula: (Collateral * Threshold) / Debt
             const healthFactor = (collateral * threshold) / debt;
-            // Map 1.0 (Liquidation) to 0% and 2.0+ to 100% Stability
+            // Map 1.0 (Liquidation) to 0% and 2.0 to 100% Stability
             uiHealth = Math.min(Math.max((healthFactor - 1) * 100, 0), 100);
           } else if (collateral > 0) {
-            // Money is in, but no one has borrowed. 100% Healthy.
-            uiHealth = 100;
+            uiHealth = 100; // Solvent with no debt
           } else {
-            // Vault is empty. Show 0% so the radar reflects the lack of data.
-            uiHealth = 0;
+            uiHealth = 0; // Empty vault
           }
 
           return {
@@ -84,30 +85,23 @@ export const useVaults = () => {
           };
 
         } catch (e) {
-          console.error(`Error fetching ${v.name}:`, e);
+          console.error(`Failed ${v.name}:`, e);
           return { name: v.name, health: 0, assets: "---" };
         }
       }));
 
       setVaults(results);
-
-      // Average health only for vaults that have assets
-      const activeVaults = results.filter(v => v.assets !== "$0.0M");
-      const avg = activeVaults.length > 0 
-        ? activeVaults.reduce((a, b) => a + b.health, 0) / activeVaults.length 
-        : 0;
-
-      setGlobalHealth(Math.round(avg));
+      const active = results.filter(v => v.health > 0);
+      setGlobalHealth(active.length > 0 ? Math.round(active.reduce((a, b) => a + b.health, 0) / active.length) : 0);
       setLoading(false);
     } catch (err) {
-      console.error("Global Fetch Error:", err);
       setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchRealData();
-    const interval = setInterval(fetchRealData, 30000); // Update every 30s
+    const interval = setInterval(fetchRealData, 30000);
     return () => clearInterval(interval);
   }, []);
 
