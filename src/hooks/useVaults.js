@@ -1,46 +1,66 @@
 import { useState, useEffect } from 'react';
+import { createPublicClient, http, formatUnits } from 'viem';
+import { mainnet } from 'viem/chains';
+import { VAULT_ABI, VAULT_ADDRESSES } from '../utils/contracts';
+
+// Get your API key from Alchemy or Infura
+const RPC_URL = import.meta.env.VITE_RPC_URL || "https://eth.llamarpc.com";
+
+const client = createPublicClient({ 
+  chain: mainnet,
+  transport: http(RPC_URL)
+});
 
 export const useVaults = () => {
   const [vaults, setVaults] = useState([]);
   const [globalHealth, setGlobalHealth] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const fetchRealData = async () => {
+    try {
+      setLoading(true);
+      
+      const results = await Promise.all(VAULT_ADDRESSES.map(async (v) => {
+        try {
+          // Fetch Health Factor (Assuming it returns a value where 1e18 = 1.0)
+          const health = await client.readContract({
+            address: v.address,
+            abi: VAULT_ABI,
+            functionName: 'getHealthFactor',
+          });
+
+          // Fetch Total Assets
+          const assets = await client.readContract({
+            address: v.address,
+            abi: VAULT_ABI,
+            functionName: 'totalAssets',
+          });
+
+          return {
+            name: v.name,
+            health: Number(formatUnits(health, 16)), // Adjust decimals based on Concrete's spec
+            assets: `$${Math.round(Number(formatUnits(assets, 18)) / 1000000)}M`
+          };
+        } catch (e) {
+          console.error(`Error fetching ${v.name}:`, e);
+          return { name: v.name, health: 0, assets: "Error" };
+        }
+      }));
+
+      setVaults(results);
+      const avg = results.reduce((acc, v) => acc + v.health, 0) / results.length;
+      setGlobalHealth(Math.round(avg));
+      setLoading(false);
+    } catch (err) {
+      console.error("Global Fetch Error:", err);
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchVaultData = async () => {
-      try {
-        setLoading(true);
-        
-        // VIBE CODER TIP: While you are setting up your RPC keys, 
-        // I've included a "Simulated Scanner" so you can see the UI working immediately.
-        
-        // 1. In a real scenario, you'd do:
-        // const provider = new ethers.JsonRpcProvider(RPC_URL);
-        // const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
-        // const addresses = await factory.allVaults();
-
-        // 2. Simulated Dynamic Data (Replace with real Fetch once you have the Factory Address)
-        setTimeout(() => {
-          const mockVaults = [
-            { name: "VAULT #001: WETH-DAI", health: 88, assets: "$142.5M" },
-            { name: "VAULT #002: WBTC-USDC", health: 45, assets: "$89.1M" },
-            { name: "VAULT #003: LINK-ETH", health: 92, assets: "$12.2M" },
-            { name: "VAULT #004: UNI-USDT", health: 76, assets: "$5.8M" },
-            { name: "VAULT #005: CRV-ETH", health: 32, assets: "$22.4M" },
-          ];
-          
-          setVaults(mockVaults);
-          const avg = mockVaults.reduce((acc, v) => acc + v.health, 0) / mockVaults.length;
-          setGlobalHealth(Math.round(avg));
-          setLoading(false);
-        }, 1500);
-
-      } catch (err) {
-        console.error("Scanner Error:", err);
-        setLoading(false);
-      }
-    };
-
-    fetchVaultData();
+    fetchRealData();
+    const interval = setInterval(fetchRealData, 30000); // Auto-refresh every 30s
+    return () => clearInterval(interval);
   }, []);
 
   return { vaults, globalHealth, loading };
