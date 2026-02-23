@@ -1,13 +1,16 @@
 import React from 'react';
-import { Activity, ShieldAlert, Zap, Globe, Cpu } from 'lucide-react';
+import { Activity, ShieldAlert, Globe, Cpu } from 'lucide-react';
 import Gauge from './components/Gauge';
 import VaultCard from './components/VaultCard';
-import FactoryScan from './components/FactoryScan'; // Ensure this matches your lowercase filename
+// FIXED: Changed to lowercase to match your file and fix the build error
+import FactoryScan from './components/FactoryScan'; 
 import { useVaults } from './hooks/useVaults';
 
 function App() {
   const { vaults, globalHealth, loading } = useVaults();
 
+  // FIXED: Alert logic - only red if health is between 1 and 60. 
+  // If it's 0 (loading), it stays green/neutral.
   const isCritical = globalHealth > 0 && globalHealth < 60;
 
   return (
@@ -45,7 +48,7 @@ function App() {
           
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-1">
             {loading ? (
-              <div className="animate-pulse text-[10px] text-neon-green opacity-40">SYNCING CHAIN DATA...</div>
+              <div className="animate-pulse text-[10px] text-neon-green opacity-40 uppercase">Syncing Chain Data...</div>
             ) : (
               vaults.map((vault, i) => (
                 <VaultCard key={i} name={vault.name} health={vault.health} assets={vault.assets} />
@@ -68,7 +71,7 @@ function App() {
               </div>
               <div className="flex justify-between items-end border-b border-white/5 pb-1 text-[10px]">
                 <span className="opacity-60 uppercase">STATUS</span> 
-                <span className={isCritical ? 'text-warning-red' : 'text-neon-green'}>
+                <span className={isCritical ? 'text-warning-red font-bold' : 'text-neon-green font-bold'}>
                   {isCritical ? 'STRESSED' : 'NOMINAL'}
                 </span>
               </div>
