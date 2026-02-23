@@ -1,11 +1,23 @@
-// This is the ABI for the Concrete Factory to get the list of vaults
-export const FACTORY_ABI = [
-  "function allVaults() view returns (address[])",
-  "function getVaultDetails(address) view returns (string name, uint256 health, uint256 tvl)"
+export const VAULT_ABI = [
+  {
+    "inputs": [],
+    "name": "getHealthFactor", // Note: Verify if Concrete uses 'getHealthFactor' or 'health'
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalAssets",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  }
 ];
 
-// Placeholder Factory Address (You will update this with the real one)
-export const FACTORY_ADDRESS = "0x0000000000000000000000000000000000000000";
-
-// Your RPC URL (Use a free tier from Alchemy or Infura)
-export const RPC_URL = "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY";
+export const VAULT_ADDRESSES = [
+  { name: "USDT Vault", address: "0x0E609b710da5e0AA476224b6c0e5445cCc21251E" },
+  { name: "WeETH Vault", address: "0xB9DC54c8261745CB97070CeFBE3D3d815aee8f20" },
+  { name: "WBTC Vault", address: "0xacce65B9dB4810125adDEa9797BaAaaaD2B73788" },
+  { name: "frxUSD+ Vault", address: "0xCF9ceAcf5c7d6D2FE6e8650D81FbE4240c72443f" }
+];
