@@ -1,7 +1,7 @@
 export const VAULT_ABI = [
   {
     "inputs": [],
-    "name": "getHealthFactor", // Note: Verify if Concrete uses 'getHealthFactor' or 'health'
+    "name": "health",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
