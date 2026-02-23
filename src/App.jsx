@@ -1,85 +1,139 @@
 import React from 'react';
-import { Activity, ShieldAlert } from 'lucide-react';
+import { Activity, ShieldAlert, Zap, Globe, Cpu } from 'lucide-react';
 import Gauge from './components/Gauge';
 import VaultCard from './components/VaultCard';
+import FactoryScan from './components/FactoryScan';
 import { useVaults } from './hooks/useVaults';
 
 function App() {
-  const { vaults, globalHealth, loading, error } = useVaults();
+  const { vaults, globalHealth, loading, triggerCrash } = useVaults();
 
   return (
-    <div className="min-h-screen p-4 md:p-8 relative">
+    <div className="min-h-screen p-4 md:p-8 relative selection:bg-neon-green selection:text-black">
+      {/* CRT Scanline Effect Overlay */}
       <div className="crt-overlay" />
       
-      <header className="flex justify-between items-center mb-10 border-b border-neon-green/30 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full border-2 border-neon-green flex items-center justify-center animate-pulse">
-            <span className="font-bold text-xl text-neon-green">C</span>
+      {/* HEADER SECTION */}
+      <header className="flex justify-between items-start mb-10 border-b border-neon-green/30 pb-6">
+        <div className="flex items-center gap-4">
+          <div 
+            className="w-12 h-12 rounded-sm border-2 border-neon-green flex items-center justify-center cursor-pointer hover:bg-neon-green hover:text-black transition-all duration-300"
+            onClick={triggerCrash} // Vibe feature: Click logo to simulate stress
+          >
+            <span className="font-black text-2xl">C</span>
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tighter uppercase text-neon-green">Concrete Health Radar</h1>
-            <p className="text-[10px] opacity-70 text-neon-green">SYSTEM-WIDE STRESS MONITOR // V1.0.4</p>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tighter uppercase text-neon-green italic">
+              Concrete Health Radar
+            </h1>
+            <div className="flex gap-4 mt-1">
+              <p className="text-[10px] opacity-70 text-neon-green flex items-center gap-1">
+                <Cpu size={10} /> CORE_ENGINE: V1.0.4
+              </p>
+              <p className="text-[10px] opacity-70 text-neon-green flex items-center gap-1">
+                <Globe size={10} /> NODE: MODULAR_MAINNET
+              </p>
+            </div>
           </div>
+        </div>
+        
+        <div className="hidden md:block text-right">
+          <div className="text-[10px] text-radar-blue font-bold tracking-widest">ENCRYPTED CONNECTION</div>
+          <div className="text-[9px] opacity-50 text-white">EST. LATENCY: 14MS</div>
         </div>
       </header>
 
-      <main className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT: DYNAMIC VAULT LIST */}
-        <section className="lg:col-span-3 glass-panel p-4 space-y-2 max-h-[70vh] overflow-y-auto custom-scrollbar">
-          <h3 className="text-xs font-bold border-b border-white/10 pb-2 mb-4 flex items-center gap-2 text-neon-green">
-            <Activity size={14} /> ACTIVE VAULTS
-          </h3>
+      {/* MAIN DASHBOARD GRID */}
+      <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-16">
+        
+        {/* LEFT COLUMN: LIVE VAULT FEED */}
+        <section className="lg:col-span-3 glass-panel p-4 flex flex-col h-[60vh] lg:h-[70vh]">
+          <div className="flex justify-between items-center border-b border-white/10 pb-2 mb-4">
+            <h3 className="text-xs font-bold flex items-center gap-2 text-neon-green">
+              <Activity size={14} /> ACTIVE VAULTS
+            </h3>
+            <span className="text-[10px] bg-neon-green/10 px-2 py-0.5 rounded text-neon-green">
+              {vaults.length} LIVE
+            </span>
+          </div>
           
-          {loading ? (
-            <div className="animate-pulse text-[10px] text-neon-green opacity-50">INITIALIZING SCANNER...</div>
-          ) : (
-            vaults.map((vault, i) => (
-              <VaultCard key={i} name={vault.name} health={vault.health} assets={vault.assets} />
-            ))
-          )}
-        </section>
-
-        {/* CENTER: THE GAUGE */}
-        <section className="lg:col-span-6 flex flex-col items-center justify-center py-10">
-          <Gauge value={globalHealth} />
-        </section>
-
-        {/* RIGHT: GLOBAL STATS */}
-        <section className="lg:col-span-3 glass-panel p-4 space-y-6">
-          <div>
-            <h3 className="text-xs font-bold opacity-50 mb-2 text-neon-green">GLOBAL METRICS</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between border-b border-white/5 pb-1">
-                <span className="text-[10px]">TOTAL VAULTS:</span> 
-                <span className="text-white">{vaults.length}</span>
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-1">
+            {loading ? (
+              <div className="space-y-4">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="h-12 w-full bg-white/5 animate-pulse rounded-sm" />
+                ))}
+                <p className="text-[10px] text-center opacity-40 uppercase tracking-tighter">Initializing Neural Link...</p>
               </div>
-              <div className="flex justify-between border-b border-white/5 pb-1">
-                <span className="text-[10px]">SYSTEM STATUS:</span> 
-                <span className={globalHealth > 50 ? 'text-neon-green' : 'text-warning-red'}>
-                  {globalHealth > 50 ? 'NOMINAL' : 'STRESSED'}
-                </span>
+            ) : (
+              vaults.map((vault, i) => (
+                <VaultCard 
+                  key={i} 
+                  name={vault.name} 
+                  health={vault.health} 
+                  assets={vault.assets} 
+                />
+              ))
+            )}
+          </div>
+        </section>
+
+        {/* CENTER COLUMN: THE MAIN RADAR */}
+        <section className="lg:col-span-6 flex flex-col items-center justify-center py-6 min-h-[400px]">
+          <div className="relative w-full flex justify-center">
+            {/* Background Decorative Rings */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+              <div className="w-[120%] aspect-square border border-neon-green rounded-full animate-[ping_10s_linear_infinite]" />
+              <div className="w-[100%] aspect-square border border-radar-blue rounded-full animate-[ping_15s_linear_infinite]" />
+            </div>
+            
+            <Gauge value={globalHealth} label="SYSTEM STRESS INDEX" />
+          </div>
+        </section>
+
+        {/* RIGHT COLUMN: SYSTEM METRICS & ALERTS */}
+        <section className="lg:col-span-3 space-y-6">
+          <div className="glass-panel p-4">
+            <h3 className="text-xs font-bold opacity-50 mb-4 text-neon-green tracking-widest">GLOBAL STATS</h3>
+            <div className="space-y-4">
+              <div className="flex justify-between items-end border-b border-white/5 pb-1">
+                <span className="text-[10px] opacity-60 uppercase">Total Liquidity</span> 
+                <span className="text-white font-bold">$1.24B</span>
+              </div>
+              <div className="flex justify-between items-end border-b border-white/5 pb-1">
+                <span className="text-[10px] opacity-60 uppercase">Network Load</span> 
+                <span className="text-neon-green font-mono">42%</span>
+              </div>
+              <div className="flex justify-between items-end border-b border-white/5 pb-1">
+                <span className="text-[10px] opacity-60 uppercase">Safety Buffer</span> 
+                <span className="text-radar-blue font-mono">18.4%</span>
               </div>
             </div>
           </div>
           
-          {globalHealth < 60 && (
-            <div className="p-3 bg-warning-red/10 border border-warning-red/30 rounded animate-pulse">
-              <div className="flex items-center gap-2 text-warning-red text-xs font-bold">
-                <ShieldAlert size={16} /> ALERT
-              </div>
-              <p className="text-[10px] mt-1 text-warning-red/80">SYSTEM-WIDE COLLATERAL REBALANCING SUGGESTED</p>
+          {/* DYNAMIC ALERT BOX */}
+          <div className={`p-4 rounded-sm border transition-all duration-500 ${
+            globalHealth < 60 
+              ? 'bg-warning-red/10 border-warning-red animate-pulse' 
+              : 'bg-neon-green/5 border-neon-green/20'
+          }`}>
+            <div className={`flex items-center gap-2 text-xs font-black ${
+              globalHealth < 60 ? 'text-warning-red' : 'text-neon-green'
+            }`}>
+              <ShieldAlert size={16} /> 
+              {globalHealth < 60 ? 'CRITICAL ALERT' : 'SYSTEM NOMINAL'}
             </div>
-          )}
+            <p className="text-[10px] mt-2 leading-relaxed opacity-80 italic">
+              {globalHealth < 60 
+                ? 'Warning: Aggregate health factor below safety threshold. Liquidation monitoring engaged.' 
+                : 'All modular vaults operating within safe debt parameters. No action required.'}
+            </p>
+          </div>
         </section>
       </main>
 
-      <footer className="fixed bottom-0 left-0 w-full bg-black border-t border-neon-green/30 p-2 overflow-hidden">
-        <div className="whitespace-nowrap flex gap-10 animate-[scanline_20s_linear_infinite] text-[10px] text-neon-green opacity-80 uppercase">
-          <span>*** Scanning Factory: {vaults.length} Vaults Found ***</span>
-          <span>Security Protocol: Concrete.xyz Liquidity Engine ***</span>
-          <span>Status: Monitoring Modular Debt Layers ***</span>
-        </div>
-      </footer>
+      {/* FOOTER: TERMINAL FEED */}
+      <FactoryScan vaultCount={vaults.length} />
     </div>
   );
 }
