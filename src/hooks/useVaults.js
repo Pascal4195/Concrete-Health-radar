@@ -19,36 +19,35 @@ export const useVaults = () => {
     try {
       const results = await Promise.all(VAULT_ADDRESSES.map(async (v) => {
         try {
-          const health = await client.readContract({
+          const healthRaw = await client.readContract({
             address: v.address,
             abi: VAULT_ABI,
-            functionName: 'health', // Ensure this function exists on-chain
+            functionName: 'getHealthFactor',
           }).catch(() => 0n);
 
-          const assets = await client.readContract({
+          const assetsRaw = await client.readContract({
             address: v.address,
             abi: VAULT_ABI,
             functionName: 'totalAssets',
           }).catch(() => 0n);
 
-          const formattedHealth = Number(formatUnits(health, 16)); 
+          // Health Factor of 1.5e18 = 150. Anything above 100 is safe.
+          const healthNum = Number(formatUnits(healthRaw, 16)); 
+          const assetNum = Number(formatUnits(assetsRaw, 18));
 
           return {
             name: v.name,
-            health: formattedHealth > 0 ? Math.round(formattedHealth) : 0,
-            assets: assets > 0 ? `$${(Number(formatUnits(assets, 18)) / 1000000).toFixed(1)}M` : "$0M"
+            health: healthNum > 0 ? Math.round(healthNum) : 0,
+            assets: assetNum > 0 ? `$${(assetNum / 1000000).toFixed(1)}M` : "$0.0M"
           };
         } catch (e) {
-          return { name: v.name, health: 0, assets: "---" };
+          return { name: v.name, health: 0, assets: "ERR" };
         }
       }));
 
       setVaults(results);
-      const activeVaults = results.filter(v => v.health > 0);
-      const avg = activeVaults.length > 0 
-        ? activeVaults.reduce((acc, v) => acc + v.health, 0) / activeVaults.length 
-        : 0;
-      
+      const active = results.filter(v => v.health > 0);
+      const avg = active.length > 0 ? active.reduce((acc, v) => acc + v.health, 0) / active.length : 0;
       setGlobalHealth(Math.round(avg));
       setLoading(false);
     } catch (err) {
