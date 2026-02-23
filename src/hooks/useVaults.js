@@ -22,7 +22,7 @@ export const useVaults = () => {
           const health = await client.readContract({
             address: v.address,
             abi: VAULT_ABI,
-            functionName: 'health',
+            functionName: 'health', // Ensure this function exists on-chain
           }).catch(() => 0n);
 
           const assets = await client.readContract({
@@ -31,7 +31,6 @@ export const useVaults = () => {
             functionName: 'totalAssets',
           }).catch(() => 0n);
 
-          // Health usually comes in 1e18. 1.2e18 = 120% health.
           const formattedHealth = Number(formatUnits(health, 16)); 
 
           return {
