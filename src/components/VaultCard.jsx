@@ -1,203 +1,100 @@
-import React, { useState } from 'react'
-import GaugeMeter from './GaugeMeter.jsx'
+// Concrete Protocol ERC-4626 Vault Addresses — Ethereum Mainnet
+export const VAULTS = [
+  {
+    id: 'usdt',
+    name: 'USDT Vault',
+    symbol: 'USDT',
+    address: '0x0E609b710da5e0AA476224b6c0e5445cCc21251E',
+    decimals: 6,
+    strategies: {
+      aave: {
+        asset: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+        type: 'aave_v3'
+      },
+      morpho: {
+        asset: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+        type: 'morpho'
+      }
+    }
+  },
+  {
+    id: 'weeth',
+    name: 'weETH Vault',
+    symbol: 'weETH',
+    address: '0xB9DC54c8261745CB97070CeFBE3D3d815aee8f20',
+    decimals: 18,
+    strategies: {
+      aave: {
+        asset: '0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee',
+        type: 'aave_v3'
+      },
+      silo: {
+        asset: '0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee',
+        type: 'silo'
+      }
+    }
+  },
+  {
+    id: 'wbtc',
+    name: 'WBTC Vault',
+    symbol: 'WBTC',
+    address: '0xacce65B9dB4810125adDEa9797BaAaaaD2B73788',
+    decimals: 8,
+    strategies: {
+      morpho: {
+        asset: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+        type: 'morpho'
+      },
+      radiant: {
+        asset: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+        type: 'radiant'
+      }
+    }
+  },
+  {
+    id: 'frxusd',
+    name: 'frxUSD+ Vault',
+    symbol: 'frxUSD+',
+    address: '0xCF9ceAcf5c7d6D2FE6e8650D81FbE4240c72443f',
+    decimals: 18,
+    // frxUSD is not listed on Aave — use USDC as APY proxy (closest USD benchmark)
+    apyProxyAsset: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+    strategies: {
+      morpho: {
+        asset: '0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29',
+        type: 'morpho'
+      },
+      silo: {
+        asset: '0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29',
+        type: 'silo'
+      }
+    }
+  }
+]
 
-export default function VaultCard({ vault, index }) {
-  const [hovered, setHovered] = useState(false)
-  const isLoading = vault.loading || vault.riskLevel === 'LOADING'
-  const col = vault.riskColor || '#8B5E0A'
+export const AAVE_POOL_ABI = [
+  'function getUserAccountData(address user) view returns (uint256 totalCollateralBase, uint256 totalDebtBase, uint256 availableBorrowsBase, uint256 currentLiquidationThreshold, uint256 ltv, uint256 healthFactor)'
+]
 
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        position: 'relative',
-        background: 'rgba(8, 5, 1, 0.82)',
-        border: `1px solid ${hovered ? col : 'rgba(200,134,10,0.22)'}`,
-        borderRadius: '3px',
-        padding: '22px 18px 18px',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        boxShadow: hovered
-          ? `0 0 28px rgba(200,134,10,0.18), inset 0 0 30px rgba(0,0,0,0.6), 0 0 2px ${col}`
-          : '0 0 10px rgba(200,134,10,0.06), inset 0 0 30px rgba(0,0,0,0.5)',
-        transition: 'all 0.35s ease',
-        animation: 'fade-up 0.6s ease forwards',
-        animationDelay: `${index * 0.12}s`,
-        opacity: 0
-      }}
-    >
-      {/* Corner brackets */}
-      {[
-        { top: 0,    left: 0,  borderTop: true,    borderLeft: true  },
-        { top: 0,    right: 0, borderTop: true,    borderRight: true },
-        { bottom: 0, left: 0,  borderBottom: true, borderLeft: true  },
-        { bottom: 0, right: 0, borderBottom: true, borderRight: true },
-      ].map((corner, i) => (
-        <div key={i} style={{
-          position: 'absolute',
-          width: '10px', height: '10px',
-          top:    corner.top,
-          bottom: corner.bottom,
-          left:   corner.left,
-          right:  corner.right,
-          borderTop:    corner.borderTop    ? `2px solid ${col}` : undefined,
-          borderBottom: corner.borderBottom ? `2px solid ${col}` : undefined,
-          borderLeft:   corner.borderLeft   ? `2px solid ${col}` : undefined,
-          borderRight:  corner.borderRight  ? `2px solid ${col}` : undefined,
-          opacity: 0.7,
-          transition: 'border-color 0.35s ease'
-        }} />
-      ))}
+export const AAVE_DATA_PROVIDER_ABI = [
+  'function getReserveData(address asset) view returns (uint256 unbacked, uint256 accruedToTreasuryScaled, uint256 totalAToken, uint256 totalStableDebt, uint256 totalVariableDebt, uint256 liquidityRate, uint256 variableBorrowRate, uint256 stableBorrowRate, uint256 averageStableBorrowRate, uint256 liquidityIndex, uint256 variableBorrowIndex, uint40 lastUpdateTimestamp)'
+]
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-        <div>
-          <div style={{
-            fontFamily: "'Share Tech Mono', monospace",
-            fontSize: '11px',
-            color: 'rgba(200,134,10,0.55)',
-            letterSpacing: '0.2em',
-            marginBottom: '3px'
-          }}>
-            CONCRETE VAULT
-          </div>
-          <div style={{
-            fontFamily: "'Orbitron', monospace",
-            fontWeight: '900',
-            fontSize: '20px',
-            color: '#EDD97A',
-            textShadow: '0 0 14px rgba(237,217,122,0.4)',
-            letterSpacing: '0.1em'
-          }}>
-            {vault.symbol}
-          </div>
-        </div>
-        <div style={{
-          fontFamily: "'Share Tech Mono', monospace",
-          fontSize: '11px',
-          color: 'rgba(200,134,10,0.4)',
-          textAlign: 'right',
-          marginTop: '3px'
-        }}>
-          {vault.address.slice(0, 6)}...{vault.address.slice(-4)}
-        </div>
-      </div>
+export const VAULT_ABI = [
+  'function totalAssets() view returns (uint256)',
+  'function totalSupply() view returns (uint256)',
+  'function convertToAssets(uint256 shares) view returns (uint256)',
+  'function asset() view returns (address)'
+]
 
-      {/* Gauge */}
-      <div style={{ margin: '6px 0 2px' }}>
-        <GaugeMeter
-          score={vault.gaugeScore}
-          riskColor={col}
-          riskLevel={vault.riskLevel}
-          loading={isLoading}
-        />
-      </div>
+export const AAVE_POOL_ADDRESS     = '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2'
+export const AAVE_DATA_PROVIDER    = '0x7B4EB56E7CD4b454BA8ff71E4518426369a138a3'
 
-      {/* HF display */}
-      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-        <div style={{
-          fontFamily: "'Share Tech Mono', monospace",
-          fontSize: '11px',
-          color: 'rgba(200,134,10,0.6)',
-          letterSpacing: '0.2em',
-          marginBottom: '4px'
-        }}>
-          HEALTH FACTOR
-        </div>
-        <div style={{
-          fontFamily: "'Orbitron', monospace",
-          fontWeight: '700',
-          fontSize: isLoading ? '16px' : vault.isSolvent ? '26px' : '32px',
-          color: col,
-          textShadow: `0 0 18px ${col}`,
-          letterSpacing: '0.06em',
-          transition: 'color 0.5s ease, text-shadow 0.5s ease'
-        }}>
-          {isLoading
-            ? <span style={{ fontSize: '14px', color: 'rgba(200,134,10,0.45)', animation: 'blink 1.2s infinite' }}>FETCHING...</span>
-            : vault.hfDisplay
-          }
-        </div>
-        {/* Solvent explanation tag */}
-        {!isLoading && vault.isSolvent && (
-          <div style={{
-            fontFamily: "'Share Tech Mono', monospace",
-            fontSize: '10px',
-            color: 'rgba(237,217,122,0.4)',
-            letterSpacing: '0.12em',
-            marginTop: '4px'
-          }}>
-            NO LEVERAGED POSITION
-          </div>
-        )}
-      </div>
-
-      {/* APY + TVL */}
-      <div style={{ display: 'flex', gap: '8px' }}>
-        {[
-          { label: 'APY', value: vault.apyDisplay },
-          { label: 'TVL', value: vault.tvl        }
-        ].map(({ label, value }) => (
-          <div key={label} style={{
-            flex: 1,
-            background: 'rgba(200,134,10,0.04)',
-            border: '1px solid rgba(200,134,10,0.12)',
-            borderRadius: '2px',
-            padding: '10px 12px'
-          }}>
-            <div style={{
-              fontFamily: "'Share Tech Mono', monospace",
-              fontSize: '11px',
-              color: 'rgba(237,217,122,0.6)',
-              letterSpacing: '0.18em',
-              marginBottom: '5px'
-            }}>
-              {label}
-            </div>
-            <div style={{
-              fontFamily: "'Orbitron', monospace",
-              fontWeight: '700',
-              fontSize: '17px',
-              color: isLoading ? 'rgba(200,134,10,0.35)' : '#C8860A',
-              textShadow: isLoading ? 'none' : '0 0 10px rgba(200,134,10,0.4)',
-              letterSpacing: '0.04em'
-            }}>
-              {isLoading ? '...' : value}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Strategy tags */}
-      <div style={{ marginTop: '12px', display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-        {Object.keys(vault.strategies || {}).map(s => (
-          <span key={s} style={{
-            fontFamily: "'Share Tech Mono', monospace",
-            fontSize: '10px',
-            color: 'rgba(200,134,10,0.5)',
-            border: '1px solid rgba(200,134,10,0.18)',
-            borderRadius: '2px',
-            padding: '3px 8px',
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase'
-          }}>
-            {s}
-          </span>
-        ))}
-      </div>
-
-      {vault.error && (
-        <div style={{
-          marginTop: '8px',
-          fontFamily: "'Share Tech Mono', monospace",
-          fontSize: '11px',
-          color: '#cc2233',
-          opacity: 0.75
-        }}>
-          ⚠ RPC ERROR
-        </div>
-      )}
-    </div>
-  )
+// HF thresholds → gauge risk zones
+export const RISK_THRESHOLDS = {
+  CRITICAL : 1.1,
+  HIGH     : 1.5,
+  MEDIUM   : 2.0,
+  LOW      : 3.0,
+  SAFE     : 999
 }
