@@ -66,9 +66,10 @@ async function fetchVaultData(provider, vault) {
     }
 
     // APY via Aave liquidityRate
+    // Use apyProxyAsset if defined (e.g. frxUSD not listed on Aave → use USDC as proxy)
     let apyDisplay = 'N/A'
     try {
-      const firstAsset  = Object.values(vault.strategies)[0].asset
+      const firstAsset  = vault.apyProxyAsset || Object.values(vault.strategies)[0].asset
       const reserveData = await aaveDataProvider.getReserveData(firstAsset)
       const rateRay     = Number(ethers.formatUnits(reserveData.liquidityRate, 27))
       const SECONDS     = 31_536_000
