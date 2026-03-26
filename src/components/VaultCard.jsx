@@ -29,19 +29,18 @@ export default function VaultCard({ vault, index }) {
     >
       {/* Corner brackets */}
       {[
-        { top: 0, left: 0,     borderTop: true,    borderLeft: true  },
-        { top: 0, right: 0,    borderTop: true,    borderRight: true },
+        { top: 0,    left: 0,  borderTop: true,    borderLeft: true  },
+        { top: 0,    right: 0, borderTop: true,    borderRight: true },
         { bottom: 0, left: 0,  borderBottom: true, borderLeft: true  },
         { bottom: 0, right: 0, borderBottom: true, borderRight: true },
       ].map((corner, i) => (
         <div key={i} style={{
           position: 'absolute',
           width: '10px', height: '10px',
-          ...Object.fromEntries(
-            Object.entries(corner)
-              .filter(([k]) => ['top','bottom','left','right'].includes(k))
-              .map(([k, v]) => [k, v])
-          ),
+          top:    corner.top,
+          bottom: corner.bottom,
+          left:   corner.left,
+          right:  corner.right,
           borderTop:    corner.borderTop    ? `2px solid ${col}` : undefined,
           borderBottom: corner.borderBottom ? `2px solid ${col}` : undefined,
           borderLeft:   corner.borderLeft   ? `2px solid ${col}` : undefined,
@@ -56,17 +55,17 @@ export default function VaultCard({ vault, index }) {
         <div>
           <div style={{
             fontFamily: "'Share Tech Mono', monospace",
-            fontSize: '9px',
-            color: 'rgba(200,134,10,0.5)',
-            letterSpacing: '0.22em',
-            marginBottom: '2px'
+            fontSize: '11px',
+            color: 'rgba(200,134,10,0.55)',
+            letterSpacing: '0.2em',
+            marginBottom: '3px'
           }}>
             CONCRETE VAULT
           </div>
           <div style={{
             fontFamily: "'Orbitron', monospace",
             fontWeight: '900',
-            fontSize: '17px',
+            fontSize: '20px',
             color: '#EDD97A',
             textShadow: '0 0 14px rgba(237,217,122,0.4)',
             letterSpacing: '0.1em'
@@ -76,8 +75,8 @@ export default function VaultCard({ vault, index }) {
         </div>
         <div style={{
           fontFamily: "'Share Tech Mono', monospace",
-          fontSize: '9px',
-          color: 'rgba(200,134,10,0.35)',
+          fontSize: '11px',
+          color: 'rgba(200,134,10,0.4)',
           textAlign: 'right',
           marginTop: '3px'
         }}>
@@ -96,58 +95,70 @@ export default function VaultCard({ vault, index }) {
       </div>
 
       {/* HF display */}
-      <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
         <div style={{
           fontFamily: "'Share Tech Mono', monospace",
-          fontSize: '9px',
-          color: 'rgba(200,134,10,0.55)',
-          letterSpacing: '0.22em',
-          marginBottom: '3px'
+          fontSize: '11px',
+          color: 'rgba(200,134,10,0.6)',
+          letterSpacing: '0.2em',
+          marginBottom: '4px'
         }}>
           HEALTH FACTOR
         </div>
         <div style={{
           fontFamily: "'Orbitron', monospace",
           fontWeight: '700',
-          fontSize: isLoading ? '16px' : '28px',
+          fontSize: isLoading ? '16px' : vault.isSolvent ? '26px' : '32px',
           color: col,
           textShadow: `0 0 18px ${col}`,
           letterSpacing: '0.06em',
           transition: 'color 0.5s ease, text-shadow 0.5s ease'
         }}>
           {isLoading
-            ? <span style={{ fontSize: '13px', color: 'rgba(200,134,10,0.45)', animation: 'blink 1.2s infinite' }}>FETCHING...</span>
+            ? <span style={{ fontSize: '14px', color: 'rgba(200,134,10,0.45)', animation: 'blink 1.2s infinite' }}>FETCHING...</span>
             : vault.hfDisplay
           }
         </div>
+        {/* Solvent explanation tag */}
+        {!isLoading && vault.isSolvent && (
+          <div style={{
+            fontFamily: "'Share Tech Mono', monospace",
+            fontSize: '10px',
+            color: 'rgba(237,217,122,0.4)',
+            letterSpacing: '0.12em',
+            marginTop: '4px'
+          }}>
+            NO LEVERAGED POSITION
+          </div>
+        )}
       </div>
 
       {/* APY + TVL */}
       <div style={{ display: 'flex', gap: '8px' }}>
         {[
-          { label: 'APY',  value: vault.apyDisplay },
-          { label: 'TVL',  value: vault.tvl        }
+          { label: 'APY', value: vault.apyDisplay },
+          { label: 'TVL', value: vault.tvl        }
         ].map(({ label, value }) => (
           <div key={label} style={{
             flex: 1,
             background: 'rgba(200,134,10,0.04)',
             border: '1px solid rgba(200,134,10,0.12)',
             borderRadius: '2px',
-            padding: '9px 12px'
+            padding: '10px 12px'
           }}>
             <div style={{
               fontFamily: "'Share Tech Mono', monospace",
-              fontSize: '9px',
-              color: 'rgba(237,217,122,0.55)',
+              fontSize: '11px',
+              color: 'rgba(237,217,122,0.6)',
               letterSpacing: '0.18em',
-              marginBottom: '4px'
+              marginBottom: '5px'
             }}>
               {label}
             </div>
             <div style={{
               fontFamily: "'Orbitron', monospace",
               fontWeight: '700',
-              fontSize: '15px',
+              fontSize: '17px',
               color: isLoading ? 'rgba(200,134,10,0.35)' : '#C8860A',
               textShadow: isLoading ? 'none' : '0 0 10px rgba(200,134,10,0.4)',
               letterSpacing: '0.04em'
@@ -159,15 +170,15 @@ export default function VaultCard({ vault, index }) {
       </div>
 
       {/* Strategy tags */}
-      <div style={{ marginTop: '10px', display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+      <div style={{ marginTop: '12px', display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
         {Object.keys(vault.strategies || {}).map(s => (
           <span key={s} style={{
             fontFamily: "'Share Tech Mono', monospace",
-            fontSize: '8px',
-            color: 'rgba(200,134,10,0.45)',
-            border: '1px solid rgba(200,134,10,0.15)',
+            fontSize: '10px',
+            color: 'rgba(200,134,10,0.5)',
+            border: '1px solid rgba(200,134,10,0.18)',
             borderRadius: '2px',
-            padding: '2px 6px',
+            padding: '3px 8px',
             letterSpacing: '0.12em',
             textTransform: 'uppercase'
           }}>
@@ -176,12 +187,11 @@ export default function VaultCard({ vault, index }) {
         ))}
       </div>
 
-      {/* Error badge */}
       {vault.error && (
         <div style={{
           marginTop: '8px',
           fontFamily: "'Share Tech Mono', monospace",
-          fontSize: '9px',
+          fontSize: '11px',
           color: '#cc2233',
           opacity: 0.75
         }}>
