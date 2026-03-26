@@ -1,0 +1,90 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --gold: #C8860A;
+  --gold-bright: #E8A020;
+  --gold-dim: #8B5E0A;
+  --gold-glow: rgba(200, 134, 10, 0.18);
+  --gold-glow-strong: rgba(232, 160, 32, 0.35);
+  --amber: #EDD97A;
+  --amber-dim: rgba(237, 217, 122, 0.6);
+  --black: #000000;
+  --black-card: rgba(0, 0, 0, 0.80);
+  --black-deep: #07050100;
+  --red: #cc2233;
+  --red-glow: rgba(204, 34, 51, 0.25);
+  --orange: #cc6600;
+  --font-display: 'Orbitron', monospace;
+  --font-mono: 'Share Tech Mono', monospace;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #080501;
+  color: #C8860A;
+  font-family: 'Share Tech Mono', monospace;
+  overflow-x: hidden;
+}
+
+body {
+  /* moai.png tiled background — add moai.png to /public/ */
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(200, 134, 10, 0.012) 2px,
+      rgba(200, 134, 10, 0.012) 4px
+    ),
+    url('/moai.png');
+  background-size: auto, 120px 120px;
+  background-repeat: repeat, repeat;
+  background-blend-mode: normal, luminosity;
+  /* moai.png will appear very dim beneath the scanlines */
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 5, 1, 0.82);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #080501; }
+::-webkit-scrollbar-thumb { background: #8B5E0A; border-radius: 3px; }
+
+::selection { background: #C8860A; color: #000; }
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(200,134,10,0.2), 0 0 20px rgba(200,134,10,0.1); }
+  50%       { box-shadow: 0 0 16px rgba(232,160,32,0.4), 0 0 40px rgba(200,134,10,0.2); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
