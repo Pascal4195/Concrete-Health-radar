@@ -150,7 +150,7 @@ export default function GaugeMeter({ score, riskColor, riskLevel, loading }) {
         y={CY + 32}
         textAnchor="middle"
         fill={loading ? 'rgba(200,134,10,0.4)' : riskColor}
-        fontSize={loading ? '10' : '11'}
+        fontSize={loading ? '11' : '13'}
         fontFamily="'Orbitron', monospace"
         fontWeight="700"
         letterSpacing="2"
